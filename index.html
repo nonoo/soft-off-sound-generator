@@ -3,63 +3,179 @@
 <head>
 	<title>Soft off</title>
 	<meta charset="UTF-8" />
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
 </head>
 <body>
-<script>
-	var softoff_ctx = new AudioContext();
 
-	function playSound(arr) {
-		var buf = new Float32Array(arr.length);
-		for (var i = 0; i < arr.length; i++)
-			buf[i] = arr[i];
-		var buffer = softoff_ctx.createBuffer(1, buf.length, softoff_ctx.sampleRate);
+<div class="container">
+	<div class="row">
+		<div class="col-2">Volume:</div>
+		<div class="col-2">
+			<input type="number" id="softoff-volume" min="0" max="100" value="50" onchange="softoff_set_volume(this.value)" />%
+		</div>
+		<div class="col">
+			<input type="range" id="softoff-range-volume" min="0" max="100" value="50" step="1" onchange="softoff_set_volume(this.value)" onmousemove="softoff_set_volume(this.value)" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-2">Length:</div>
+		<div class="col-2">
+			<input type="number" id="softoff-length" min="0" max="100" value="0.5" onchange="softoff_set_length(this.value)" /> sec
+		</div>
+		<div class="col">
+			<input type="range" id="softoff-range-length" min="0" max="5" value="0.5" step="0.25" onchange="softoff_set_length(this.value)" onmousemove="softoff_set_length(this.value)" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-2">Length (off):</div>
+		<div class="col-2">
+			<input type="number" id="softoff-length-off" min="0" max="100" value="1.5" onchange="softoff_set_length_off(this.value)" /> sec
+		</div>
+		<div class="col">
+			<input type="range" id="softoff-range-length-off" min="0" max="5" value="1.5" step="0.25" onchange="softoff_set_length_off(this.value)" onmousemove="softoff_set_length_off(this.value)" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-2">Freq:</div>
+		<div class="col-2">
+			<input type="number" id="softoff-freq" min="0" max="20000" value="70" onchange="softoff_set_freq(this.value)" /> Hz
+		</div>
+		<div class="col">
+			<input type="range" id="softoff-range-freq" min="0" max="500" value="70" step="1" onchange="softoff_set_freq(this.value)" onmousemove="softoff_set_freq(this.value)" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-2">Freq off:</div>
+		<div class="col-2">
+			<input type="number" id="softoff-freq-off" min="0" max="20000" value="73" onchange="softoff_set_freq_off(this.value)" /> Hz
+		</div>
+		<div class="col">
+			<input type="range" id="softoff-range-freq-off" min="0" max="500" value="73" step="1" onchange="softoff_set_freq_off(this.value)" onmousemove="softoff_set_freq_off(this.value)" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-2">Duty cycle:</div>
+		<div class="col-2">
+			<input type="number" id="softoff-duty-cycle" min="0" max="100" value="8" onchange="softoff_set_duty_cycle(this.value)" />%
+		</div>
+		<div class="col">
+			<input type="range" id="softoff-range-duty-cycle" min="0" max="100" value="8" step="1" onchange="softoff_set_duty_cycle(this.value)" onmousemove="softoff_set_duty_cycle(this.value)" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-2">
+			<input type="button" value="Play" onclick="softoff_start()" />
+		</div>
+	</div>
+</div>
+
+<script>
+	var softoff = {};
+	softoff.audioctx = new AudioContext();
+
+	function softoff_play_samples() {
+		var buf = new Float32Array(softoff.samples.length);
+		for (var i = 0; i < softoff.samples.length; i++)
+			buf[i] = softoff.samples[i];
+		softoff.samples = [];
+		var buffer = softoff.audioctx.createBuffer(1, buf.length, softoff.audioctx.sampleRate);
 		buffer.copyToChannel(buf, 0);
-		var source = softoff_ctx.createBufferSource();
+		var source = softoff.audioctx.createBufferSource();
 		source.buffer = buffer;
-		source.connect(softoff_ctx.destination);
+		source.connect(softoff.audioctx.destination);
 		source.start(0);
 	}
 
+	function softoff_set_volume(percent) {
+		percent = parseInt(percent);
+		softoff.volume = percent/100;
+		document.getElementById('softoff-volume').value = percent;
+		document.getElementById('softoff-range-volume').value = percent;
+	}
+
+	function softoff_set_length(sec) {
+		sec = parseFloat(sec);
+		softoff.length_sec = sec;
+		document.getElementById('softoff-length').value = sec;
+		document.getElementById('softoff-range-length').value = sec;
+	}
+
+	function softoff_set_length_off(sec) {
+		sec = parseFloat(sec);
+		softoff.length_off_sec = sec;
+		document.getElementById('softoff-length-off').value = sec;
+		document.getElementById('softoff-range-length-off').value = sec;
+	}
+
+	function softoff_set_freq(hz) {
+		hz = parseInt(hz);
+		softoff.freq_hz = hz;
+		document.getElementById('softoff-freq').value = hz;
+		document.getElementById('softoff-range-freq').value = hz;
+	}
+
+	function softoff_set_freq_off(hz) {
+		hz = parseInt(hz);
+		softoff.freq_off_hz = hz;
+		document.getElementById('softoff-freq-off').value = hz;
+		document.getElementById('softoff-range-freq-off').value = hz;
+	}
+
+	function softoff_set_duty_cycle(percent) {
+		percent = parseInt(percent);
+		softoff.duty_cycle_percent = percent;
+		document.getElementById('softoff-duty-cycle').value = percent;
+		document.getElementById('softoff-range-duty-cycle').value = percent;
+	}
+
 	function softoff_get_pulse_widths(freq_hz, duty_cycle_percent) {
-		var full_pulse_width_samples = (1/freq_hz) * softoff_ctx.sampleRate;
+		var full_pulse_width_samples = (1/freq_hz) * softoff.audioctx.sampleRate;
 		return {
 			full_pulse_width_samples: full_pulse_width_samples,
 			pulse_on_width_samples: full_pulse_width_samples * (duty_cycle_percent/100)
 		};
 	}
 
-	var volume = 0.2;
-	var signal_length_sec = 0.5;
-	var signal_off_length_sec = 1.5;
-	var freq_hz = 70;
-	var freq_off_hz = 73;
-	var duty_cycle_percent = 8;
-
-	var arr = [];
-	var arr_n = 0;
-
-	var pulse = softoff_get_pulse_widths(freq_hz, duty_cycle_percent);
-	for (var i = 0; i < softoff_ctx.sampleRate * signal_length_sec; i++) {
-		if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
-			arr[arr_n++] = volume;
-		else
-			arr[arr_n++] = 0;
+	function softoff_render() {
+		var pulse = softoff_get_pulse_widths(softoff.freq_hz, softoff.duty_cycle_percent);
+		for (var i = 0; i < softoff.audioctx.sampleRate * softoff.length_sec; i++) {
+			if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
+				softoff.samples.push(softoff.volume);
+			else
+				softoff.samples.push(0);
+		}
 	}
 
-	var sample_count_at_end = softoff_ctx.sampleRate * signal_off_length_sec;
-	var freq_step = (freq_off_hz-freq_hz)/sample_count_at_end;
+	function softoff_render_off() {
+		var sample_count_at_end = softoff.audioctx.sampleRate * softoff.length_off_sec;
+		var freq_step = (softoff.freq_off_hz-softoff.freq_hz)/sample_count_at_end;
+		var freq_hz = softoff.freq_hz;
 
-	for (var i = 0; i < sample_count_at_end; i++) {
-		if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
-			arr[arr_n++] = volume * (Math.cos((i/sample_count_at_end)*Math.PI)+1) * 0.5;
-		else
-			arr[arr_n++] = 0;
+		for (var i = 0; i < sample_count_at_end; i++) {
+			var pulse = softoff_get_pulse_widths(freq_hz, softoff.duty_cycle_percent);
 
-		freq_hz += freq_step;
-		pulse = softoff_get_pulse_widths(freq_hz, duty_cycle_percent);
+			if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
+				softoff.samples.push(softoff.volume * (Math.cos((i/sample_count_at_end)*Math.PI)+1) * 0.5);
+			else
+				softoff.samples.push(0);
+
+			freq_hz += freq_step;
+		}
 	}
 
-	playSound(arr)
+	function softoff_start() {
+		softoff.samples = [];
+		softoff_set_volume(document.getElementById('softoff-volume').value);
+		softoff_set_length(document.getElementById('softoff-length').value);
+		softoff_set_length_off(document.getElementById('softoff-length-off').value);
+		softoff_set_freq(document.getElementById('softoff-freq').value);
+		softoff_set_freq_off(document.getElementById('softoff-freq-off').value);
+		softoff_set_duty_cycle(document.getElementById('softoff-duty-cycle').value);
+
+		softoff_render(0.1);
+		softoff_render_off();
+		softoff_play_samples();
+	}
 </script>
 </body>
 </html>
