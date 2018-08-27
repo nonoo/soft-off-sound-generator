@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Soft off</title>
+	<meta charset="UTF-8" />
+</head>
+<body>
+<script>
+	var softoff_ctx = new AudioContext();
+
+	function playSound(arr) {
+		var buf = new Float32Array(arr.length);
+		for (var i = 0; i < arr.length; i++)
+			buf[i] = arr[i];
+		var buffer = softoff_ctx.createBuffer(1, buf.length, softoff_ctx.sampleRate);
+		buffer.copyToChannel(buf, 0);
+		var source = softoff_ctx.createBufferSource();
+		source.buffer = buffer;
+		source.connect(softoff_ctx.destination);
+		source.start(0);
+	}
+
+	function softoff_get_pulse_widths(freq_hz, duty_cycle_percent) {
+		var full_pulse_width_samples = (1/freq_hz) * softoff_ctx.sampleRate;
+		return {
+			full_pulse_width_samples: full_pulse_width_samples,
+			pulse_on_width_samples: full_pulse_width_samples * (duty_cycle_percent/100)
+		};
+	}
+
+	var volume = 0.2;
+	var signal_length_sec = 0.5;
+	var signal_off_length_sec = 1.5;
+	var freq_hz = 70;
+	var freq_off_hz = 73;
+	var duty_cycle_percent = 8;
+
+	var arr = [];
+	var arr_n = 0;
+
+	var pulse = softoff_get_pulse_widths(freq_hz, duty_cycle_percent);
+	for (var i = 0; i < softoff_ctx.sampleRate * signal_length_sec; i++) {
+		if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
+			arr[arr_n++] = volume;
+		else
+			arr[arr_n++] = 0;
+	}
+
+	var sample_count_at_end = softoff_ctx.sampleRate * signal_off_length_sec;
+	var freq_step = (freq_off_hz-freq_hz)/sample_count_at_end;
+
+	for (var i = 0; i < sample_count_at_end; i++) {
+		if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
+			arr[arr_n++] = volume * (Math.cos((i/sample_count_at_end)*Math.PI)+1) * 0.5;
+		else
+			arr[arr_n++] = 0;
+
+		freq_hz += freq_step;
+		pulse = softoff_get_pulse_widths(freq_hz, duty_cycle_percent);
+	}
+
+	playSound(arr)
+</script>
+</body>
+</html>
