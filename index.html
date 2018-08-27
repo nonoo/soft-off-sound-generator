@@ -4,6 +4,9 @@
 	<title>Soft off sound generator</title>
 	<meta charset="UTF-8" />
 	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" />
+	<style>
+		body { padding: 50px; }
+	</style>
 </head>
 <body>
 
@@ -76,6 +79,13 @@
 		<div class="col-2">
 			<input type="button" value="Play" onclick="softoff_start()" />
 		</div>
+		<div class="col-2">
+			<input type="button" value="Export" onclick="softoff_export()" />
+			<input type="button" value="Import" onclick="softoff_import()" />
+		</div>
+		<div class="col">
+			<input type="text" id="softoff-settings-json" />
+		</div>
 	</div>
 </div>
 
@@ -133,21 +143,21 @@
 
 	function softoff_set_duty_cycle(percent) {
 		percent = parseInt(percent);
-		softoff.duty_cycle_percent = percent;
+		softoff.duty_cycle = percent/100;
 		document.getElementById('softoff-duty-cycle').value = percent;
 		document.getElementById('softoff-range-duty-cycle').value = percent;
 	}
 
-	function softoff_get_pulse_widths(freq_hz, duty_cycle_percent) {
+	function softoff_get_pulse_widths(freq_hz, duty_cycle) {
 		var full_pulse_width_samples = (1/freq_hz) * softoff.audioctx.sampleRate;
 		return {
 			full_pulse_width_samples: full_pulse_width_samples,
-			pulse_on_width_samples: full_pulse_width_samples * (duty_cycle_percent/100)
+			pulse_on_width_samples: full_pulse_width_samples * duty_cycle
 		};
 	}
 
 	function softoff_render() {
-		var pulse = softoff_get_pulse_widths(softoff.freq_hz, softoff.duty_cycle_percent);
+		var pulse = softoff_get_pulse_widths(softoff.freq_hz, softoff.duty_cycle);
 		for (var i = 0; i < softoff.audioctx.sampleRate * softoff.length_sec; i++) {
 			if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
 				softoff.samples.push(softoff.volume);
@@ -162,7 +172,7 @@
 		var freq_hz = softoff.freq_hz;
 
 		for (var i = 0; i < sample_count_at_end; i++) {
-			var pulse = softoff_get_pulse_widths(freq_hz, softoff.duty_cycle_percent);
+			var pulse = softoff_get_pulse_widths(freq_hz, softoff.duty_cycle);
 
 			if (i % pulse.full_pulse_width_samples <= pulse.pulse_on_width_samples)
 				softoff.samples.push(softoff.volume * (Math.cos((i/sample_count_at_end)*Math.PI)+1) * 0.5);
@@ -173,18 +183,52 @@
 		}
 	}
 
-	function softoff_start() {
-		softoff.samples = [];
+	function softoff_init_settings() {
 		softoff_set_volume(document.getElementById('softoff-volume').value);
 		softoff_set_length(document.getElementById('softoff-length').value);
 		softoff_set_length_off(document.getElementById('softoff-length-off').value);
 		softoff_set_freq(document.getElementById('softoff-freq').value);
 		softoff_set_freq_off(document.getElementById('softoff-freq-off').value);
 		softoff_set_duty_cycle(document.getElementById('softoff-duty-cycle').value);
+	}
+
+	function softoff_start() {
+		softoff_init_settings();
+		softoff.samples = [];
 
 		softoff_render(0.1);
 		softoff_render_off();
 		softoff_play_samples();
+	}
+
+	function softoff_export() {
+		softoff_init_settings();
+		var e = {
+			volume: document.getElementById('softoff-volume').value,
+			length: parseFloat(document.getElementById('softoff-length').value),
+			length_off: parseFloat(document.getElementById('softoff-length-off').value),
+			freq: parseInt(document.getElementById('softoff-freq').value),
+			freq_off: parseInt(document.getElementById('softoff-freq-off').value),
+			duty_cycle: parseInt(document.getElementById('softoff-duty-cycle').value)
+		};
+		document.getElementById('softoff-settings-json').value = JSON.stringify(e);
+	}
+
+	function softoff_import() {
+		try {
+			var e = JSON.parse(document.getElementById('softoff-settings-json').value);
+
+			softoff_set_volume(e.volume);
+			softoff_set_length(e.length);
+			softoff_set_length_off(e.length_off);
+			softoff_set_freq(e.freq);
+			softoff_set_freq_off(e.freq_off);
+			softoff_set_duty_cycle(e.duty_cycle);
+
+			window.alert('Imported successfully!');
+		} catch (e) {
+			window.alert('Import failed!');
+		}
 	}
 </script>
 </body>
