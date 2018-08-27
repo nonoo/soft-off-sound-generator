@@ -18,9 +18,7 @@
 		Created by Norbert "Nonoo" Varga.
 		The original soft off sound recorded by Blueghost is&nbsp;<a href="soft-off-orig.wav" target="_blank">here</a>.
 	</div>
-	<div class="row">
-		<hr/>
-	</div>
+	<hr/>
 	<div class="row">
 		<div class="col-2">Volume:</div>
 		<div class="col-2">
@@ -75,24 +73,31 @@
 			<input type="range" id="softoff-range-duty-cycle" min="0" max="100" value="8" step="1" onchange="softoff_set_duty_cycle(this.value)" onmousemove="softoff_set_duty_cycle(this.value)" />
 		</div>
 	</div>
+	<hr/>
 	<div class="row">
 		<div class="col-2">
-			<input type="button" value="Play" onclick="softoff_start()" />
+			<input type="button" value="Play" onclick="softoff_start(0)" />
 		</div>
 		<div class="col-2">
-			<input type="button" value="Export" onclick="softoff_export()" />
-			<input type="button" value="Import" onclick="softoff_import()" />
+			<input type="button" value="Play and save to .wav" onclick="softoff_start(1)" />
 		</div>
 		<div class="col">
 			<input type="text" id="softoff-settings-json" />
+			<input type="button" value="Config export" onclick="softoff_export()" />
+			<input type="button" value="Config import" onclick="softoff_import()" />
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-2">
 		</div>
 	</div>
 </div>
 
 <script>
 	var softoff = {};
+	var softoff_exportobjecturl;
 
-	function softoff_play_samples() {
+	function softoff_play_samples(save_to_wav) {
 		var buf = new Float32Array(softoff.samples.length);
 		for (var i = 0; i < softoff.samples.length; i++)
 			buf[i] = softoff.samples[i];
@@ -102,6 +107,30 @@
 		var source = softoff.audioctx.createBufferSource();
 		source.buffer = buffer;
 		source.connect(softoff.audioctx.destination);
+		if (save_to_wav) {
+			var rec = new Recorder(source, { workerPath: 'https://cdn.jsdelivr.net/npm/recorderjs@1.0.1/recorderWorker.js' });
+			rec.record();
+			source.addEventListener('ended', function() {
+				rec.stop();
+				rec.exportWAV(function(blob) {
+					softoff_exportobjecturl = window.URL.createObjectURL(blob);
+
+					var link = document.createElement('a');
+					link.href = softoff_exportobjecturl;
+					link.download = 'softoff-' + new Date().toISOString() + '.wav';
+					document.body.append(link);
+
+					// Waiting for the link to be added to the document.
+					window.requestAnimationFrame(function () {
+						var event = new MouseEvent('click');
+						link.dispatchEvent(event);
+						link.remove();
+
+						setTimeout('window.URL.revokeObjectURL(softoff_exportobjecturl)', 0);
+					});
+				});
+			});
+		}
 		source.start(0);
 	}
 
@@ -191,14 +220,14 @@
 		softoff_set_duty_cycle(document.getElementById('softoff-duty-cycle').value);
 	}
 
-	function softoff_start() {
+	function softoff_start(save_to_wav) {
 		softoff_init_settings();
 		softoff.audioctx = new AudioContext();
 		softoff.samples = [];
 
 		softoff_render(0.1);
 		softoff_render_off();
-		softoff_play_samples();
+		softoff_play_samples(save_to_wav);
 	}
 
 	function softoff_export() {
@@ -231,5 +260,6 @@
 		}
 	}
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recorderjs/0.1.0/recorder.js" type="text/javascript"></script>
 </body>
 </html>
