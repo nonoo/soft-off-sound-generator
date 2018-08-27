@@ -91,7 +91,6 @@
 
 <script>
 	var softoff = {};
-	softoff.audioctx = new AudioContext();
 
 	function softoff_play_samples() {
 		var buf = new Float32Array(softoff.samples.length);
@@ -194,6 +193,7 @@
 
 	function softoff_start() {
 		softoff_init_settings();
+		softoff.audioctx = new AudioContext();
 		softoff.samples = [];
 
 		softoff_render(0.1);
